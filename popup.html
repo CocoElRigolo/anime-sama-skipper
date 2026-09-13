@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<title>Anime-Sama Skipper</title>
+<style>
+  body {
+    margin: 0;
+    width: 260px;
+    background: #0b0f18;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  .ast-popup {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .ast-popup-title {
+    color: #f5f5f5;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    opacity: 0.85;
+  }
+
+  .ast-toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    background: rgba(13, 17, 28, 0.92);
+    color: #f5f5f5;
+    border: 1px solid #0369a1;
+    border-radius: 10px;
+    padding: 9px 14px 9px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+    transition: background 0.15s ease, transform 0.15s ease;
+    width: 100%;
+    font-family: inherit;
+  }
+
+  .ast-toggle-btn:hover {
+    background: #0090dd;
+    transform: translateY(-1px);
+  }
+
+  .ast-toggle-state {
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: #0369a1;
+  }
+
+  .ast-toggle-btn.ast-toggle-off .ast-toggle-state {
+    background: rgba(245, 245, 245, 0.15);
+  }
+</style>
+</head>
+<body>
+  <div class="ast-popup">
+    <div class="ast-popup-title">Anime-Sama Skipper</div>
+    <button id="ast-toggle-skip" class="ast-toggle-btn" type="button">
+      <span class="ast-toggle-label">Skip opening</span>
+      <span id="ast-toggle-state" class="ast-toggle-state">Enabled</span>
+    </button>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

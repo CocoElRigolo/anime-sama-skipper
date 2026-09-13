@@ -1,0 +1,40 @@
+{
+  "manifest_version": 3,
+  "name": "Anime-Sama Skipper",
+  "version": "1.2.0",
+  "description": "Ouvre le lecteur Sibnet dans un onglet dédié, synchronise le passage à l'épisode suivant, et permet de sauter automatiquement l'opening (AniList/AniSkip).",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "permissions": ["storage", "scripting", "tabs"],
+  "host_permissions": [
+    "https://anime-sama.to/*",
+    "https://video.sibnet.ru/*",
+    "https://graphql.anilist.co/*",
+    "https://api.aniskip.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://anime-sama.to/*"],
+      "js": ["content-anime-sama.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    },
+    {
+      "matches": ["https://video.sibnet.ru/*"],
+      "js": ["content-sibnet.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Anime-Sama Skipper"
+  }
+}
