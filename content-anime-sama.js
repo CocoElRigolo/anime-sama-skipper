@@ -4,11 +4,12 @@
 
   const PLAYER_ID = "playerDF";
   const EPISODE_SELECT_ID = "selectEpisodes";
-  const BUTTON_ID = "ast-open-sibnet-btn";
+  const BUTTON_ID = "ast-open-player-btn";
   const STYLE_ID = "ast-anime-sama-styles";
-  const SIBNET_PREFIX = "https://video.sibnet.ru/";
+  const PLAYER_KEY = "ast_player";
 
   let lastSentKey = null;
+  let selectedPlayer = "sibnet";
 
   function isValidPage() {
     const path = location.pathname.replace(/\/+$/, "");
@@ -17,10 +18,22 @@
     return valid;
   }
 
-  function isSibnetUrl(url) {
-    const isSibnet = typeof url === "string" && url.startsWith(SIBNET_PREFIX);
-    console.log("[AS SKIPPER] checking Sibnet URL", url, isSibnet);
-    return isSibnet;
+  function isSelectedPlayerUrl(url) {
+    try {
+      const hostname = new URL(url).hostname;
+      const isSibnet = hostname === "video.sibnet.ru";
+      const isVidmoly =
+        hostname === "ansembed.net" ||
+        hostname.endsWith(".ansembed.net") ||
+        hostname === "vidmoly.me" ||
+        hostname.endsWith(".vidmoly.me");
+      const matches = selectedPlayer === "sibnet" ? isSibnet : isVidmoly;
+      console.log("[AS SKIPPER] checking selected player URL", { url, selectedPlayer, matches });
+      return matches;
+    } catch (error) {
+      console.log("[AS SKIPPER] invalid player URL", url, error);
+      return false;
+    }
   }
 
   // Ex: /catalogue/one-piece/saison1/vf -> "one piece"
@@ -81,7 +94,7 @@
   }
 
   function createButton() {
-    console.log("[AS SKIPPER] creating open-Sibnet button");
+    console.log("[AS SKIPPER] creating open-player button");
     const btn = document.createElement("button");
     btn.id = BUTTON_ID;
     btn.type = "button";
@@ -91,7 +104,8 @@
       console.log("[AS SKIPPER] button clicked", url);
       if (!url) return;
       chrome.runtime.sendMessage({
-        type: "OPEN_SIBNET",
+        type: "OPEN_PLAYER",
+        player: selectedPlayer,
         url,
         title: btn.dataset.title || null,
         episode: btn.dataset.episode ? parseInt(btn.dataset.episode, 10) : null,
@@ -132,8 +146,8 @@
     }
 
     const iframe = document.getElementById(PLAYER_ID);
-    if (!iframe || !isSibnetUrl(iframe.src)) {
-      console.log("[AS SKIPPER] no valid Sibnet iframe found");
+    if (!iframe || !isSelectedPlayerUrl(iframe.src)) {
+      console.log("[AS SKIPPER] no iframe found for selected player");
       removeButton();
       lastSentKey = null;
       return;
@@ -150,7 +164,13 @@
     if (key !== lastSentKey) {
       console.log("[AS SKIPPER] sending NEW_EP_URL", { url: iframe.src, title, episode });
       lastSentKey = key;
-      chrome.runtime.sendMessage({ type: "NEW_EP_URL", url: iframe.src, title, episode });
+      chrome.runtime.sendMessage({
+        type: "NEW_EP_URL",
+        player: selectedPlayer,
+        url: iframe.src,
+        title,
+        episode,
+      });
     }
   }
 
@@ -194,5 +214,16 @@
   }
 
   patchHistoryForNavigation();
+  chrome.storage.local.get({ [PLAYER_KEY]: "sibnet" }, (data) => {
+    selectedPlayer = data[PLAYER_KEY] === "vidmoly" ? "vidmoly" : "sibnet";
+    syncIframe();
+  });
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === "local" && changes[PLAYER_KEY]) {
+      selectedPlayer = changes[PLAYER_KEY].newValue === "vidmoly" ? "vidmoly" : "sibnet";
+      lastSentKey = null;
+      syncIframe();
+    }
+  });
   syncIframe();
 })();

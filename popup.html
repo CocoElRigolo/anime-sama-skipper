@@ -63,6 +63,17 @@
   .ast-toggle-btn.ast-toggle-off .ast-toggle-state {
     background: rgba(245, 245, 245, 0.15);
   }
+
+  .ast-player-select {
+    box-sizing: border-box;
+    width: 100%;
+    background: rgba(13, 17, 28, 0.92);
+    color: #f5f5f5;
+    border: 1px solid #0369a1;
+    border-radius: 10px;
+    padding: 9px 12px;
+    font: inherit;
+  }
 </style>
 </head>
 <body>
@@ -72,6 +83,10 @@
       <span class="ast-toggle-label">Skip opening</span>
       <span id="ast-toggle-state" class="ast-toggle-state">Enabled</span>
     </button>
+    <select id="ast-player-select" class="ast-player-select" aria-label="Player">
+      <option value="sibnet">Sibnet</option>
+      <option value="vidmoly">Vidmoly</option>
+    </select>
   </div>
   <script src="popup.js"></script>
 </body>

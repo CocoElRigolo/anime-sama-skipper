@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Anime-Sama Skipper",
   "version": "1.2.0",
-  "description": "Ouvre le lecteur Sibnet dans un onglet dédié, synchronise le passage à l'épisode suivant, et permet de sauter automatiquement l'opening (AniList/AniSkip).",
+  "description": "Ouvre les lecteurs Sibnet et Vidmoly dans un onglet dédié, synchronise le passage à l'épisode suivant, et permet de sauter automatiquement l'opening (AniList/AniSkip).",
   "icons": {
     "16": "icons/icon16.png",
     "32": "icons/icon32.png",
@@ -13,6 +13,10 @@
   "host_permissions": [
     "https://anime-sama.to/*",
     "https://video.sibnet.ru/*",
+    "https://ansembed.net/*",
+    "https://*.ansembed.net/*",
+    "https://vidmoly.me/*",
+    "https://*.vidmoly.me/*",
     "https://graphql.anilist.co/*",
     "https://api.aniskip.com/*"
   ],
@@ -29,6 +33,17 @@
     {
       "matches": ["https://video.sibnet.ru/*"],
       "js": ["content-sibnet.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    },
+    {
+      "matches": [
+        "https://ansembed.net/*",
+        "https://*.ansembed.net/*",
+        "https://vidmoly.me/*",
+        "https://*.vidmoly.me/*"
+      ],
+      "js": ["content-vidmoly.js"],
       "run_at": "document_idle",
       "all_frames": false
     }

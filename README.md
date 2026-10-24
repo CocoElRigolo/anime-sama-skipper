@@ -15,9 +15,12 @@ When the extension detects a compatible video player, a **"Watch with Skipper"**
 
 ## Supported Players
 
-- **SIBNET** (currently)
+- **Sibnet**
+- **Vidmoly** (including Anime-Sama's `ansembed.net` embeds)
 
-More players coming soon!
+Choose the player matching the currently selected server in the extension popup.
+The selected embed opens in a dedicated tab and supports opening skip, auto-next,
+and episode synchronization.
 
 ## Installation
 

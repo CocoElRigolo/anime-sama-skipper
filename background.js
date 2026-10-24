@@ -1,5 +1,5 @@
 // background.js
-// Rôle : garder en mémoire quel onglet Anime-Sama est lié à quel onglet Sibnet,
+// Rôle : garder en mémoire quel onglet Anime-Sama est lié à quel lecteur,
 // relayer les actions (ouverture, passage épisode suivant, navigation) entre eux,
 // et calculer les temps de skip opening/ending via AniList + AniSkip.
 
@@ -122,6 +122,21 @@ async function fetchSkipTimes(title, episode) {
   }
 }
 
+function isVidmolyPage(url) {
+  try {
+    const hostname = new URL(url).hostname;
+    return (
+      hostname === "ansembed.net" ||
+      hostname.endsWith(".ansembed.net") ||
+      hostname === "vidmoly.me" ||
+      hostname.endsWith(".vidmoly.me")
+    );
+  } catch (error) {
+    console.log("[AS SKIPPER] invalid Vidmoly page URL", url, error);
+    return false;
+  }
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log("[AS SKIPPER] received message", message, sender.tab && sender.tab.id);
   handleMessage(message, sender)
@@ -135,7 +150,23 @@ async function handleMessage(message, sender) {
   console.log("[AS SKIPPER] handling message", message.type, "from tab", senderTabId);
 
   switch (message.type) {
-    // Envoyé par content-anime-sama.js quand on clique sur "Regarder sur Sibnet"
+    // Envoyé par content-anime-sama.js quand on clique sur "Watch with Skipper"
+    case "OPEN_PLAYER": {
+      console.log("[AS SKIPPER] OPEN_PLAYER request", message.player, message.url, "for tab", senderTabId);
+      if (senderTabId === undefined) return { ok: false, error: "no-sender-tab" };
+      const newTab = await chrome.tabs.create({ url: message.url });
+
+      await pairTabs(senderTabId, newTab.id);
+
+      const contexts = await getContexts();
+      contexts[newTab.id] = { title: message.title || null, episode: message.episode || null };
+      await setContexts(contexts);
+
+      console.log("[AS SKIPPER] opened player tab", newTab.id);
+      return { ok: true, tabId: newTab.id };
+    }
+
+    // Backwards compatibility with older content-script instances.
     case "OPEN_SIBNET": {
       console.log("[AS SKIPPER] OPEN_SIBNET request", message.url, "for tab", senderTabId);
       if (senderTabId === undefined) return { ok: false, error: "no-sender-tab" };
@@ -151,7 +182,7 @@ async function handleMessage(message, sender) {
       return { ok: true, tabId: newTab.id };
     }
 
-    // Envoyé par content-sibnet.js quand on clique sur "Épisode suivant"
+    // Envoyé par un script de lecteur quand on clique sur "Épisode suivant"
     case "REQUEST_NEXT_EP": {
       console.log("[AS SKIPPER] REQUEST_NEXT_EP from tab", senderTabId);
       const pairs = await getPairs();
@@ -184,25 +215,24 @@ async function handleMessage(message, sender) {
       }
     }
 
-    // Envoyé par content-anime-sama.js dès qu'il détecte un nouveau lien Sibnet
-    // dans l'iframe #playerDF (que ce soit suite à nextEp() ou à une navigation manuelle)
+    // Envoyé par content-anime-sama.js dès qu'il détecte le nouvel épisode
+    // dans l'iframe #playerDF.
     case "NEW_EP_URL": {
       console.log("[AS SKIPPER] NEW_EP_URL", message.url, "from tab", senderTabId);
       const pairs = await getPairs();
-      const sibnetTabId = pairs[senderTabId];
-      if (sibnetTabId === undefined) {
-        // Pas d'onglet Sibnet ouvert/lié pour cet onglet Anime-Sama : rien à faire.
-        console.log("[AS SKIPPER] no paired Sibnet tab for Anime-Sama tab", senderTabId);
+      const playerTabId = pairs[senderTabId];
+      if (playerTabId === undefined) {
+        console.log("[AS SKIPPER] no paired player tab for Anime-Sama tab", senderTabId);
         return { ok: true, forwarded: false };
       }
 
       const contexts = await getContexts();
-      contexts[sibnetTabId] = { title: message.title || null, episode: message.episode || null };
+      contexts[playerTabId] = { title: message.title || null, episode: message.episode || null };
       await setContexts(contexts);
 
       try {
-        console.log("[AS SKIPPER] forwarding navigation to Sibnet tab", sibnetTabId);
-        await chrome.tabs.sendMessage(sibnetTabId, { type: "NAVIGATE", url: message.url });
+        console.log("[AS SKIPPER] forwarding navigation to player tab", playerTabId);
+        await chrome.tabs.sendMessage(playerTabId, { type: "NAVIGATE", url: message.url });
         return { ok: true, forwarded: true };
       } catch (e) {
         console.log("[AS SKIPPER] failed to forward navigation", e);
@@ -224,6 +254,57 @@ async function handleMessage(message, sender) {
       }
       const times = await getSkipTimes(ctx.title, ctx.episode);
       return { ok: true, ...times };
+    }
+
+    case "GET_VIDMOLY_STATE": {
+      if (senderTabId === undefined || !isVidmolyPage(sender.tab.url)) {
+        return { ok: false, error: "invalid-vidmoly-sender" };
+      }
+      const [result] = await chrome.scripting.executeScript({
+        target: { tabId: senderTabId },
+        world: "MAIN",
+        func: () => {
+          const player = typeof window.jwplayer === "function" ? window.jwplayer() : null;
+          const video = document.querySelector("video");
+          const playerDuration = player?.getDuration?.();
+          const playerPosition = player?.getPosition?.();
+          const duration =
+            Number.isFinite(playerDuration) && playerDuration > 0 ? playerDuration : video?.duration;
+          const position = Number.isFinite(playerPosition) ? playerPosition : video?.currentTime;
+
+          if (!Number.isFinite(duration) || duration <= 0 || !Number.isFinite(position)) {
+            return null;
+          }
+          return { duration, position };
+        },
+      });
+      return result.result ? { ok: true, ...result.result } : { ok: false, error: "player-state-unavailable" };
+    }
+
+    case "SEEK_VIDMOLY": {
+      if (senderTabId === undefined || !isVidmolyPage(sender.tab.url)) {
+        return { ok: false, error: "invalid-vidmoly-sender" };
+      }
+      if (!Number.isFinite(message.position) || message.position < 0) {
+        return { ok: false, error: "invalid-position" };
+      }
+      const [result] = await chrome.scripting.executeScript({
+        target: { tabId: senderTabId },
+        world: "MAIN",
+        args: [message.position],
+        func: (position) => {
+          const player = typeof window.jwplayer === "function" ? window.jwplayer() : null;
+          if (player && typeof player.seek === "function") {
+            player.seek(position);
+            return true;
+          }
+          const video = document.querySelector("video");
+          if (!video) return false;
+          video.currentTime = position;
+          return true;
+        },
+      });
+      return result.result ? { ok: true } : { ok: false, error: "player-not-found" };
     }
 
     default:
