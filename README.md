@@ -9,6 +9,8 @@ Anime-Sama Skipper is an MV3 extension designed to enhance your anime watching e
 - Automatically advances to the next episode when the current one ends
 - Works seamlessly with compatible video players
 
+This project uses the [AniSkip API](https://github.com/aniskip/aniskip-api) to fetch skip times for openings and endings.
+
 ## How to Use
 
 When the extension detects a compatible video player, a **"Watch with Skipper"** button will appear on the page. Simply click it to enable the auto-skip and auto-advance features.
