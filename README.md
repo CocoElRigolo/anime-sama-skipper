@@ -15,6 +15,8 @@ This project uses the [AniSkip API](https://github.com/aniskip/aniskip-api) to f
 
 When the extension detects a compatible video player, a **"Watch with Skipper"** button will appear on the page. Simply click it to enable the auto-skip and auto-advance features.
 
+For the full experience, DO NOT press the “full screen” button on the player. Instead, switch to full-screen mode in your browser by pressing the F11 key.
+
 ## Supported Players
 
 - **Sibnet**
