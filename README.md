@@ -20,7 +20,7 @@ For the full experience, DO NOT press the “full screen” button on the player
 ## Supported Players
 
 - **Sibnet**
-- **Vidmoly** (including Anime-Sama's `ansembed.net` embeds)
+- **Vidmoly**
 
 Choose the player matching the currently selected server in the extension popup.
 The selected embed opens in a dedicated tab and supports opening skip, auto-next,
